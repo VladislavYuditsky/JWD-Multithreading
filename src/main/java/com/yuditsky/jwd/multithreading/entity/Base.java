@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Base implements Runnable {
@@ -13,9 +14,22 @@ public class Base implements Runnable {
     private Queue<Van> vans;
     private Queue<Van> perishableCargoVans;
 
-    private ReentrantLock lock = new ReentrantLock();
+    private static ReentrantLock lock = new ReentrantLock();
 
-    public Base() {
+    private static Base instance;
+
+    public static Base getInstance() {
+        if (instance == null) {
+            lock.lock();
+            if (instance == null) {
+                instance = new Base();
+            }
+            lock.unlock();
+        }
+        return instance;
+    }
+
+    private Base() {
         terminals = new ArrayList<Terminal>();
         for (int i = 0; i < TERMINAL_NUMBER; i++) {
             Terminal terminal = new Terminal();
@@ -26,7 +40,6 @@ public class Base implements Runnable {
 
         vans = new ArrayDeque<Van>();
         perishableCargoVans = new ArrayDeque<Van>();
-        lock = new ReentrantLock();
     }
 
     public void serve(Van van) {
@@ -53,8 +66,6 @@ public class Base implements Runnable {
             for (Terminal terminal : terminals) {
                 if (terminal.isFree()) {
                     if (!perishableCargoVans.isEmpty()) {
-                        System.out.println("E");
-                        System.out.println(terminals);
                         terminal.setVan(perishableCargoVans.poll());
                     } else {
                         if (!vans.isEmpty()) {
@@ -62,6 +73,12 @@ public class Base implements Runnable {
                         }
                     }
                 }
+            }
+
+            try {
+                TimeUnit.MILLISECONDS.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
